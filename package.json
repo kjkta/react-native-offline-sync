@@ -1,6 +1,6 @@
 {
   "name": "@keithj/react-native-offline-sync",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "A React Native library to manage offline API request queuing and automatic syncing when the device regains network connectivity.",
   "source": "./src/index.tsx",
   "main": "./lib/module/index.js",
