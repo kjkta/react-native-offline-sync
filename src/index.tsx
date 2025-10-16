@@ -1,2 +1,2 @@
 export * from './hooks/useOfflineSync';
-export * from './utils/queueManager'
+export * from './utils/queueManager';

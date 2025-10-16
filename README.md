@@ -40,10 +40,10 @@ yarn add @react-native-async-storage/async-storage @react-native-community/netin
 ```tsx
 import React from 'react';
 import { View, Text, Button } from 'react-native';
-import { useOfflineSync } from '@keithj/react-native-offline-sync';
+import { useOfflineSync, enqueueRequest } from '@keithj/react-native-offline-sync';
 
 export default function App() {
-  const { isOnline, enqueueRequest, queueLength } = useOfflineSync();
+  useOfflineSync();
 
   const handleSend = () => {
     enqueueRequest({
@@ -64,8 +64,6 @@ export default function App() {
 
   return (
     <View>
-      <Text>Network: {isOnline ? 'Online ✅' : 'Offline ❌'}</Text>
-      <Text>Queue Length: {queueLength}</Text>
       <Button title="Send Request" onPress={handleSend} />
     </View>
   );

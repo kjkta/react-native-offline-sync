@@ -1,10 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import axios from 'axios';
-import type { AxiosRequestConfig } from 'axios';
 
-const QUEUE_KEY = '@offline_request_queue';
+import { QUEUE_KEY } from '../constants';
 
-export type QueuedRequest = AxiosRequestConfig & {
+export type QueuedRequest = RequestInit & {
+  url: string;
   retries?: number;
   __maxRetries?: number;
 };
@@ -21,7 +20,7 @@ export const addToQueue = async (
       (item: QueuedRequest) =>
         item.url === request.url &&
         item.method?.toLowerCase() === request.method?.toLowerCase() &&
-        JSON.stringify(item.data) === JSON.stringify(request.data)
+        JSON.stringify(item.body) === JSON.stringify(request.body)
     );
     if (isDuplicate) {
       console.log('⚠️ Duplicate request ignored:', request.url);
@@ -55,7 +54,8 @@ export const processQueue = async (maxRetries: number = 0): Promise<void> => {
     );
 
     try {
-      await axios(request);
+      const { url, ...fetchOptions } = request;
+      await fetch(url, fetchOptions);
     } catch (err) {
       console.log(`Retry #${retries + 1} failed for ${request.url}`);
 
@@ -71,4 +71,30 @@ export const processQueue = async (maxRetries: number = 0): Promise<void> => {
   }
 
   await setQueue(remainingQueue);
+};
+
+export const enqueueRequest = async ({
+  request,
+  options = {},
+}: {
+  request: QueuedRequest;
+  options?: {
+    maxRetries?: number;
+    preventDuplicate?: boolean;
+  };
+}) => {
+  const maxRetries = options.maxRetries ?? 3;
+  const preventDuplicate = options.preventDuplicate ?? false;
+
+  // Attempt to send the request immediately, queue if it fails
+  try {
+    const { url, ...fetchOptions } = request;
+    await fetch(url, fetchOptions);
+  } catch (err) {
+    console.log('Failed to send request, queueing it:', err);
+    await addToQueue(
+      { ...request, __maxRetries: maxRetries },
+      preventDuplicate
+    );
+  }
 };

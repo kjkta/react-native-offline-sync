@@ -1,8 +1,11 @@
-import { useOfflineSync } from 'react-native-offline-sync';
-import { Text, View, Button, Alert } from 'react-native';
+import React from 'react';
+import { Text, View, Button } from 'react-native';
+import { useOfflineSync, enqueueRequest } from 'react-native-offline-sync';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function App() {
-  const { isOnline, enqueueRequest, queueLength } = useOfflineSync();
+  const storageKey = useOfflineSync();
+  const [queueLength, setQueueLength] = React.useState(0);
 
   const handleSend = () => {
     const request = {
@@ -21,18 +24,20 @@ export default function App() {
         maxRetries: 5,
       },
     });
-
-    Alert.alert(
-      isOnline ? 'Sent Immediately' : 'Queued',
-      `Queue Length: ${queueLength}`
-    );
   };
+
+  React.useEffect(() => {
+    const getQueueLength = async () => {
+      const queue = await AsyncStorage.getItem(storageKey);
+      const queueLengthInt = queue ? JSON.parse(queue).length : 0;
+      setQueueLength(queueLengthInt);
+    };
+
+    getQueueLength();
+  }, [storageKey]);
 
   return (
     <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-      <Text style={{ fontSize: 20, marginBottom: 10 }}>
-        🌐 Network: {isOnline ? 'Online ✅' : 'Offline ❌'}
-      </Text>
       <Text style={{ fontSize: 16, marginBottom: 20 }}>
         📦 Queue Length: {queueLength}
       </Text>
