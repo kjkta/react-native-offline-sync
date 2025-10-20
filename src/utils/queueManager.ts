@@ -2,16 +2,18 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { QUEUE_KEY } from '../constants';
 
+type CallbackFunction = (response: Response, retries: number) => void;
+
 export type QueuedRequest = RequestInit & {
   url: string;
-  callback?: (response: Response) => void;
+  callback?: CallbackFunction;
   retries?: number;
   __maxRetries?: number;
 };
 
 export const addToQueue = async (
   request: QueuedRequest,
-  callback?: (response: Response) => void,
+  callback?: CallbackFunction,
   preventDuplicate = false
 ) => {
   const existing = await AsyncStorage.getItem(QUEUE_KEY);
@@ -58,7 +60,7 @@ export const processQueue = async (maxRetries: number = 0): Promise<void> => {
     try {
       const { url, callback, ...fetchOptions } = request;
       const response = await fetch(url, fetchOptions);
-      if (callback) callback(response);
+      if (callback) callback(response, retries + 1);
     } catch (err) {
       console.log(`Retry #${retries + 1} failed for ${request.url}`);
 
@@ -82,7 +84,7 @@ export const enqueueRequest = async ({
   options = {},
 }: {
   request: QueuedRequest;
-  callback?: (response: Response) => void;
+  callback?: CallbackFunction;
   options?: {
     maxRetries?: number;
     preventDuplicate?: boolean;
@@ -95,7 +97,7 @@ export const enqueueRequest = async ({
   try {
     const { url, ...fetchOptions } = request;
     const req = await fetch(url, fetchOptions);
-    if (callback) callback(req);
+    if (callback) callback(req, 0);
     if (req.ok) {
       return req;
     } else {
