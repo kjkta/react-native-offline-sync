@@ -47,7 +47,6 @@
     "queue",
     "api",
     "sync",
-    "axios",
     "retry",
     "network",
     "netinfo"

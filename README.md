@@ -30,7 +30,7 @@ yarn add @keithj/react-native-offline-sync
 You also need to install these peer dependencies:
 
 ```sh
-yarn add @react-native-async-storage/async-storage @react-native-community/netinfo axios
+yarn add @react-native-async-storage/async-storage @react-native-community/netinfo
 ```
 
 ---
