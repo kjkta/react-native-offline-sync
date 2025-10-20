@@ -82,19 +82,27 @@ export const enqueueRequest = async ({
     maxRetries?: number;
     preventDuplicate?: boolean;
   };
-}) => {
+}): Promise<Response> => {
   const maxRetries = options.maxRetries ?? 3;
   const preventDuplicate = options.preventDuplicate ?? false;
 
   // Attempt to send the request immediately, queue if it fails
   try {
     const { url, ...fetchOptions } = request;
-    await fetch(url, fetchOptions);
+    const req = await fetch(url, fetchOptions);
+    if (req.ok) {
+      return req;
+    } else {
+      throw req;
+    }
   } catch (err) {
     console.log('Failed to send request, queueing it:', err);
     await addToQueue(
       { ...request, __maxRetries: maxRetries },
       preventDuplicate
     );
+    return {
+      ok: false,
+    } as Response;
   }
 };
