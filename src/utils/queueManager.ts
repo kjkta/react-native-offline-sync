@@ -4,12 +4,14 @@ import { QUEUE_KEY } from '../constants';
 
 export type QueuedRequest = RequestInit & {
   url: string;
+  callback?: (response: Response) => void;
   retries?: number;
   __maxRetries?: number;
 };
 
 export const addToQueue = async (
   request: QueuedRequest,
+  callback?: (response: Response) => void,
   preventDuplicate = false
 ) => {
   const existing = await AsyncStorage.getItem(QUEUE_KEY);
@@ -28,7 +30,7 @@ export const addToQueue = async (
     }
   }
 
-  queue.push({ ...request, retries: 0, queuedAt: Date.now() }); // future-proofing for retries
+  queue.push({ ...request, callback, retries: 0, queuedAt: Date.now() }); // future-proofing for retries
   console.log('📥 Queuing request:', request);
   await AsyncStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
 };
@@ -54,8 +56,9 @@ export const processQueue = async (maxRetries: number = 0): Promise<void> => {
     );
 
     try {
-      const { url, ...fetchOptions } = request;
-      await fetch(url, fetchOptions);
+      const { url, callback, ...fetchOptions } = request;
+      const response = await fetch(url, fetchOptions);
+      if (callback) callback(response);
     } catch (err) {
       console.log(`Retry #${retries + 1} failed for ${request.url}`);
 
@@ -75,9 +78,11 @@ export const processQueue = async (maxRetries: number = 0): Promise<void> => {
 
 export const enqueueRequest = async ({
   request,
+  callback,
   options = {},
 }: {
   request: QueuedRequest;
+  callback?: (response: Response) => void;
   options?: {
     maxRetries?: number;
     preventDuplicate?: boolean;
@@ -90,6 +95,7 @@ export const enqueueRequest = async ({
   try {
     const { url, ...fetchOptions } = request;
     const req = await fetch(url, fetchOptions);
+    if (callback) callback(req);
     if (req.ok) {
       return req;
     } else {
@@ -99,6 +105,7 @@ export const enqueueRequest = async ({
     console.log('Failed to send request, queueing it:', err);
     await addToQueue(
       { ...request, __maxRetries: maxRetries },
+      callback,
       preventDuplicate
     );
     return {
