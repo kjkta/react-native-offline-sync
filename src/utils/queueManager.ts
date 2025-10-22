@@ -57,13 +57,19 @@ export const processQueue = async (maxRetries: number = 0): Promise<void> => {
       `🔁 Processing request to ${request.url}, retry #${retries + 1}/${requestMaxRetries}`
     );
 
+    const { url, callback, ...fetchOptions } = request;
+
     try {
-      const { url, callback, ...fetchOptions } = request;
       const response = await fetch(url, fetchOptions);
-      if (callback) callback(response, retries + 1);
-    } catch (err) {
+      if (response.ok) {
+        if (callback) callback(response, retries + 1);
+      } else {
+        throw response;
+      }
+    } catch (err: any) {
       console.log(`Retry #${retries + 1} failed for ${request.url}`);
 
+      if (callback) callback(err, retries + 1);
       if (retries + 1 < requestMaxRetries) {
         remainingQueue.push({
           ...request,
@@ -103,20 +109,10 @@ export const enqueueRequest = async ({
     } else {
       throw req;
     }
-  } catch (err: Response | Error | unknown) {
+  } catch (err: any) {
     console.log('Failed to send request, queueing it:', err);
 
-    // Determine what type of error we got
-    let errorResponse: Response;
-    if (err instanceof Response) {
-      errorResponse = err;
-    } else if (err instanceof Error) {
-      errorResponse = { ok: false, status: 0 } as Response;
-    } else {
-      errorResponse = { ok: false, status: 0 } as Response;
-    }
-
-    if (callback) callback(errorResponse, 0);
+    if (callback) callback(err, 0);
 
     await addToQueue(
       { ...request, __maxRetries: maxRetries },
