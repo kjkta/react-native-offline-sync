@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { QUEUE_KEY } from '../constants';
 
-type CallbackFunction = (response: Response, retries: number) => void;
+type CallbackFunction = (result: Response | Error, retries: number) => void;
 
 export type QueuedRequest = RequestInit & {
   url: string;
@@ -57,13 +57,19 @@ export const processQueue = async (maxRetries: number = 0): Promise<void> => {
       `🔁 Processing request to ${request.url}, retry #${retries + 1}/${requestMaxRetries}`
     );
 
+    const { url, callback, ...fetchOptions } = request;
+
     try {
-      const { url, callback, ...fetchOptions } = request;
       const response = await fetch(url, fetchOptions);
-      if (callback) callback(response, retries + 1);
-    } catch (err) {
+      if (response.ok) {
+        if (callback) callback(response, retries + 1);
+      } else {
+        throw response;
+      }
+    } catch (err: any) {
       console.log(`Retry #${retries + 1} failed for ${request.url}`);
 
+      if (callback) callback(err, retries + 1);
       if (retries + 1 < requestMaxRetries) {
         remainingQueue.push({
           ...request,
@@ -97,14 +103,17 @@ export const enqueueRequest = async ({
   try {
     const { url, ...fetchOptions } = request;
     const req = await fetch(url, fetchOptions);
-    if (callback) callback(req, 0);
     if (req.ok) {
+      if (callback) callback(req, 0);
       return req;
     } else {
       throw req;
     }
-  } catch (err) {
+  } catch (err: any) {
     console.log('Failed to send request, queueing it:', err);
+
+    if (callback) callback(err, 0);
+
     await addToQueue(
       { ...request, __maxRetries: maxRetries },
       callback,
