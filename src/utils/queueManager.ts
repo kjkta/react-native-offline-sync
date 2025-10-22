@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { QUEUE_KEY } from '../constants';
 
-type CallbackFunction = (response: Response, retries: number) => void;
+type CallbackFunction = (result: Response | Error, retries: number) => void;
 
 export type QueuedRequest = RequestInit & {
   url: string;
