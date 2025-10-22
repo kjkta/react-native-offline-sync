@@ -97,14 +97,27 @@ export const enqueueRequest = async ({
   try {
     const { url, ...fetchOptions } = request;
     const req = await fetch(url, fetchOptions);
-    if (callback) callback(req, 0);
     if (req.ok) {
+      if (callback) callback(req, 0);
       return req;
     } else {
       throw req;
     }
-  } catch (err) {
+  } catch (err: Response | Error | unknown) {
     console.log('Failed to send request, queueing it:', err);
+
+    // Determine what type of error we got
+    let errorResponse: Response;
+    if (err instanceof Response) {
+      errorResponse = err;
+    } else if (err instanceof Error) {
+      errorResponse = { ok: false, status: 0 } as Response;
+    } else {
+      errorResponse = { ok: false, status: 0 } as Response;
+    }
+
+    if (callback) callback(errorResponse, 0);
+
     await addToQueue(
       { ...request, __maxRetries: maxRetries },
       callback,
