@@ -62,19 +62,32 @@ export const processQueue = async (maxRetries: number = 0): Promise<void> => {
     try {
       const response = await fetch(url, fetchOptions);
       if (response.ok) {
-        if (callback) callback(response, retries + 1);
+        if (callback) {
+          try {
+            callback(response, retries + 1);
+          } catch (error) {
+            console.log('Callback function threw error', error);
+          }
+        }
       } else {
         throw response;
       }
     } catch (err: any) {
       console.log(`Retry #${retries + 1} failed for ${request.url}`);
 
-      if (callback) callback(err, retries + 1);
       if (retries + 1 < requestMaxRetries) {
         remainingQueue.push({
           ...request,
           retries: retries + 1,
         });
+
+        if (callback) {
+          try {
+            callback(err, retries + 1);
+          } catch (error) {
+            console.log('Callback function threw error', error);
+          }
+        }
       } else {
         console.log('❌ Dropping request after max retries:', request.url);
       }
@@ -104,7 +117,13 @@ export const enqueueRequest = async ({
     const { url, ...fetchOptions } = request;
     const req = await fetch(url, fetchOptions);
     if (req.ok) {
-      if (callback) callback(req, 0);
+      if (callback) {
+        try {
+          callback(req, 0);
+        } catch (error) {
+          console.log('Callback function threw error', error);
+        }
+      }
       return req;
     } else {
       throw req;
@@ -112,13 +131,19 @@ export const enqueueRequest = async ({
   } catch (err: any) {
     console.log('Failed to send request, queueing it:', err);
 
-    if (callback) callback(err, 0);
-
     await addToQueue(
       { ...request, __maxRetries: maxRetries },
       callback,
       preventDuplicate
     );
+
+    if (callback) {
+      try {
+        callback(err, 0);
+      } catch (error) {
+        console.log('Callback function threw error', error);
+      }
+    }
     return {
       ok: false,
     } as Response;
