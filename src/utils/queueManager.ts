@@ -69,12 +69,13 @@ export const processQueue = async (maxRetries: number = 0): Promise<void> => {
     } catch (err: any) {
       console.log(`Retry #${retries + 1} failed for ${request.url}`);
 
-      if (callback) callback(err, retries + 1);
       if (retries + 1 < requestMaxRetries) {
         remainingQueue.push({
           ...request,
           retries: retries + 1,
         });
+
+        if (callback) callback(err, retries + 1);
       } else {
         console.log('❌ Dropping request after max retries:', request.url);
       }
@@ -112,13 +113,13 @@ export const enqueueRequest = async ({
   } catch (err: any) {
     console.log('Failed to send request, queueing it:', err);
 
-    if (callback) callback(err, 0);
-
     await addToQueue(
       { ...request, __maxRetries: maxRetries },
       callback,
       preventDuplicate
     );
+
+    if (callback) callback(err, 0);
     return {
       ok: false,
     } as Response;
